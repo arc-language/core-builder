@@ -136,7 +136,8 @@ func (b *Builder) CreateGlobalVariable(name string, typ types.Type, initializer 
 		Initializer: initializer,
 		Linkage:     ir.ExternalLinkage,
 	}
-	// Set name through reflection or add a setter (simplified here)
+	g.SetType(typ)
+	g.SetName(name)
 	if b.module != nil {
 		b.module.AddGlobal(g)
 	}
@@ -150,6 +151,8 @@ func (b *Builder) CreateGlobalConstant(name string, initializer ir.Constant) *ir
 		IsConstant:  true,
 		Linkage:     ir.ExternalLinkage,
 	}
+	g.SetName(name)
+	g.SetType(initializer.Type())
 	if b.module != nil {
 		b.module.AddGlobal(g)
 	}
@@ -183,6 +186,7 @@ func (b *Builder) CreateBlockInFunction(name string, fn *ir.Function) *ir.BasicB
 // CreateRet creates a return instruction
 func (b *Builder) CreateRet(v ir.Value) *ir.RetInst {
 	inst := &ir.RetInst{}
+	inst.Op = ir.OpRet
 	if v != nil {
 		inst.SetOperand(0, v)
 	}
@@ -193,6 +197,7 @@ func (b *Builder) CreateRet(v ir.Value) *ir.RetInst {
 // CreateRetVoid creates a void return
 func (b *Builder) CreateRetVoid() *ir.RetInst {
 	inst := &ir.RetInst{}
+	inst.Op = ir.OpRet
 	b.insert(inst)
 	return inst
 }
@@ -200,6 +205,7 @@ func (b *Builder) CreateRetVoid() *ir.RetInst {
 // CreateBr creates an unconditional branch
 func (b *Builder) CreateBr(target *ir.BasicBlock) *ir.BrInst {
 	inst := &ir.BrInst{Target: target}
+	inst.Op = ir.OpBr
 	b.insert(inst)
 	// Update CFG
 	b.currentBlock.Successors = append(b.currentBlock.Successors, target)
@@ -214,6 +220,7 @@ func (b *Builder) CreateCondBr(cond ir.Value, trueBlock, falseBlock *ir.BasicBlo
 		TrueBlock:  trueBlock,
 		FalseBlock: falseBlock,
 	}
+	inst.Op = ir.OpCondBr
 	b.insert(inst)
 	// Update CFG
 	b.currentBlock.Successors = append(b.currentBlock.Successors, trueBlock, falseBlock)
@@ -229,6 +236,7 @@ func (b *Builder) CreateSwitch(cond ir.Value, defaultBlock *ir.BasicBlock, numCa
 		DefaultBlock: defaultBlock,
 		Cases:        make([]ir.SwitchCase, 0, numCases),
 	}
+	inst.Op = ir.OpSwitch
 	b.insert(inst)
 	b.currentBlock.Successors = append(b.currentBlock.Successors, defaultBlock)
 	defaultBlock.Predecessors = append(defaultBlock.Predecessors, b.currentBlock)
@@ -249,6 +257,7 @@ func (b *Builder) AddCase(sw *ir.SwitchInst, val *ir.ConstantInt, block *ir.Basi
 // CreateUnreachable creates an unreachable instruction
 func (b *Builder) CreateUnreachable() *ir.UnreachableInst {
 	inst := &ir.UnreachableInst{}
+	inst.Op = ir.OpUnreachable
 	b.insert(inst)
 	return inst
 }
@@ -262,6 +271,7 @@ func (b *Builder) createBinaryOp(op ir.Opcode, lhs, rhs ir.Value, name string) *
 		name = b.generateName()
 	}
 	inst := &ir.BinaryInst{}
+	inst.Op = op // FIX: Set Opcode
 	inst.SetName(name)
 	inst.SetOperand(0, lhs)
 	inst.SetOperand(1, rhs)
@@ -409,6 +419,7 @@ func (b *Builder) CreateAlloca(typ types.Type, name string) *ir.AllocaInst {
 	inst := &ir.AllocaInst{
 		AllocatedType: typ,
 	}
+	inst.Op = ir.OpAlloca
 	inst.SetType(types.NewPointer(typ))
 	inst.SetName(name)
 	b.insert(inst)
@@ -424,6 +435,7 @@ func (b *Builder) CreateAllocaWithCount(typ types.Type, count ir.Value, name str
 		AllocatedType: typ,
 		NumElements:   count,
 	}
+	inst.Op = ir.OpAlloca
 	inst.SetType(types.NewPointer(typ))
 	inst.SetName(name)
 	b.insert(inst)
@@ -436,6 +448,7 @@ func (b *Builder) CreateLoad(typ types.Type, ptr ir.Value, name string) *ir.Load
 		name = b.generateName()
 	}
 	inst := &ir.LoadInst{}
+	inst.Op = ir.OpLoad
 	inst.SetName(name)
 	inst.SetType(typ)
 	inst.SetOperand(0, ptr)
@@ -460,6 +473,7 @@ func (b *Builder) CreateAlignedLoad(typ types.Type, ptr ir.Value, align int, nam
 // CreateStore creates a store instruction
 func (b *Builder) CreateStore(val ir.Value, ptr ir.Value) *ir.StoreInst {
 	inst := &ir.StoreInst{}
+	inst.Op = ir.OpStore
 	inst.SetOperand(0, val)
 	inst.SetOperand(1, ptr)
 	b.insert(inst)
@@ -492,10 +506,10 @@ func (b *Builder) CreateGEP(pointeeType types.Type, ptr ir.Value, indices []ir.V
 	inst := &ir.GetElementPtrInst{
 		SourceElementType: pointeeType,
 	}
+	inst.Op = ir.OpGetElementPtr
 	inst.SetName(name)
-	// Simplified return type calculation: GEP always returns a pointer
-	// A real implementation would need to walk the type to find the exact element type
-	inst.SetType(types.NewPointer(pointeeType)) // Placeholder approximation
+	// Simplified return type calculation
+	inst.SetType(types.NewPointer(pointeeType))
 	for i, op := range operands {
 		inst.SetOperand(i, op)
 	}
@@ -528,6 +542,7 @@ func (b *Builder) createCast(op ir.Opcode, v ir.Value, destTy types.Type, name s
 	inst := &ir.CastInst{
 		DestType: destTy,
 	}
+	inst.Op = op // FIX: Set Opcode
 	inst.SetName(name)
 	inst.SetType(destTy)
 	inst.SetOperand(0, v)
@@ -594,6 +609,7 @@ func (b *Builder) CreateICmp(pred ir.ICmpPredicate, lhs, rhs ir.Value, name stri
 	inst := &ir.ICmpInst{
 		Predicate: pred,
 	}
+	inst.Op = ir.OpICmp
 	inst.SetName(name)
 	inst.SetType(types.I1)
 	inst.SetOperand(0, lhs)
@@ -609,6 +625,7 @@ func (b *Builder) CreateFCmp(pred ir.FCmpPredicate, lhs, rhs ir.Value, name stri
 	inst := &ir.FCmpInst{
 		Predicate: pred,
 	}
+	inst.Op = ir.OpFCmp
 	inst.SetName(name)
 	inst.SetType(types.I1)
 	inst.SetOperand(0, lhs)
@@ -668,6 +685,7 @@ func (b *Builder) CreatePhi(typ types.Type, name string) *ir.PhiInst {
 		name = b.generateName()
 	}
 	inst := &ir.PhiInst{}
+	inst.Op = ir.OpPhi
 	inst.SetName(name)
 	inst.SetType(typ)
 	b.insert(inst)
@@ -680,6 +698,7 @@ func (b *Builder) CreateSelect(cond ir.Value, trueVal, falseVal ir.Value, name s
 		name = b.generateName()
 	}
 	inst := &ir.SelectInst{}
+	inst.Op = ir.OpSelect
 	inst.SetName(name)
 	inst.SetType(trueVal.Type())
 	inst.SetOperand(0, cond)
@@ -697,8 +716,9 @@ func (b *Builder) CreateCall(fn *ir.Function, args []ir.Value, name string) *ir.
 	inst := &ir.CallInst{
 		Callee: fn,
 	}
+	inst.Op = ir.OpCall
 	inst.SetName(name)
-	inst.SetType(fn.FuncType.ReturnType) // Fixed: Set instruction type
+	inst.SetType(fn.FuncType.ReturnType)
 	for i, arg := range args {
 		inst.SetOperand(i, arg)
 	}
@@ -714,8 +734,9 @@ func (b *Builder) CreateCallByName(name string, retType types.Type, args []ir.Va
 	inst := &ir.CallInst{
 		CalleeName: name,
 	}
+	inst.Op = ir.OpCall
 	inst.SetName(resultName)
-	inst.SetType(retType) // Fixed: Set instruction type
+	inst.SetType(retType)
 	for i, arg := range args {
 		inst.SetOperand(i, arg)
 	}
@@ -731,9 +752,9 @@ func (b *Builder) CreateExtractValue(agg ir.Value, indices []int, name string) *
 	inst := &ir.ExtractValueInst{
 		Indices: indices,
 	}
+	inst.Op = ir.OpExtractValue
 	inst.SetName(name)
-	// Simplified return type calculation
-	inst.SetType(agg.Type()) // In reality, this should be the element type
+	inst.SetType(agg.Type()) // Approximation
 	inst.SetOperand(0, agg)
 	b.insert(inst)
 	return inst
@@ -747,6 +768,7 @@ func (b *Builder) CreateInsertValue(agg ir.Value, val ir.Value, indices []int, n
 	inst := &ir.InsertValueInst{
 		Indices: indices,
 	}
+	inst.Op = ir.OpInsertValue
 	inst.SetName(name)
 	inst.SetType(agg.Type())
 	inst.SetOperand(0, agg)
