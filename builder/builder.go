@@ -265,6 +265,8 @@ func (b *Builder) createBinaryOp(op ir.Opcode, lhs, rhs ir.Value, name string) *
 	inst.SetName(name)
 	inst.SetOperand(0, lhs)
 	inst.SetOperand(1, rhs)
+	// Implicitly set type to LHS type (standard for binary ops)
+	inst.SetType(lhs.Type())
 	b.insert(inst)
 	return inst
 }
@@ -407,6 +409,7 @@ func (b *Builder) CreateAlloca(typ types.Type, name string) *ir.AllocaInst {
 	inst := &ir.AllocaInst{
 		AllocatedType: typ,
 	}
+	inst.SetType(types.NewPointer(typ))
 	inst.SetName(name)
 	b.insert(inst)
 	return inst
@@ -421,6 +424,7 @@ func (b *Builder) CreateAllocaWithCount(typ types.Type, count ir.Value, name str
 		AllocatedType: typ,
 		NumElements:   count,
 	}
+	inst.SetType(types.NewPointer(typ))
 	inst.SetName(name)
 	b.insert(inst)
 	return inst
@@ -433,6 +437,7 @@ func (b *Builder) CreateLoad(typ types.Type, ptr ir.Value, name string) *ir.Load
 	}
 	inst := &ir.LoadInst{}
 	inst.SetName(name)
+	inst.SetType(typ)
 	inst.SetOperand(0, ptr)
 	b.insert(inst)
 	return inst
@@ -483,11 +488,14 @@ func (b *Builder) CreateGEP(pointeeType types.Type, ptr ir.Value, indices []ir.V
 	operands := make([]ir.Value, 1+len(indices))
 	operands[0] = ptr
 	copy(operands[1:], indices)
-	
+
 	inst := &ir.GetElementPtrInst{
 		SourceElementType: pointeeType,
 	}
 	inst.SetName(name)
+	// Simplified return type calculation: GEP always returns a pointer
+	// A real implementation would need to walk the type to find the exact element type
+	inst.SetType(types.NewPointer(pointeeType)) // Placeholder approximation
 	for i, op := range operands {
 		inst.SetOperand(i, op)
 	}
@@ -521,6 +529,7 @@ func (b *Builder) createCast(op ir.Opcode, v ir.Value, destTy types.Type, name s
 		DestType: destTy,
 	}
 	inst.SetName(name)
+	inst.SetType(destTy)
 	inst.SetOperand(0, v)
 	b.insert(inst)
 	return inst
@@ -586,6 +595,7 @@ func (b *Builder) CreateICmp(pred ir.ICmpPredicate, lhs, rhs ir.Value, name stri
 		Predicate: pred,
 	}
 	inst.SetName(name)
+	inst.SetType(types.I1)
 	inst.SetOperand(0, lhs)
 	inst.SetOperand(1, rhs)
 	b.insert(inst)
@@ -600,6 +610,7 @@ func (b *Builder) CreateFCmp(pred ir.FCmpPredicate, lhs, rhs ir.Value, name stri
 		Predicate: pred,
 	}
 	inst.SetName(name)
+	inst.SetType(types.I1)
 	inst.SetOperand(0, lhs)
 	inst.SetOperand(1, rhs)
 	b.insert(inst)
@@ -658,6 +669,7 @@ func (b *Builder) CreatePhi(typ types.Type, name string) *ir.PhiInst {
 	}
 	inst := &ir.PhiInst{}
 	inst.SetName(name)
+	inst.SetType(typ)
 	b.insert(inst)
 	return inst
 }
@@ -669,6 +681,7 @@ func (b *Builder) CreateSelect(cond ir.Value, trueVal, falseVal ir.Value, name s
 	}
 	inst := &ir.SelectInst{}
 	inst.SetName(name)
+	inst.SetType(trueVal.Type())
 	inst.SetOperand(0, cond)
 	inst.SetOperand(1, trueVal)
 	inst.SetOperand(2, falseVal)
@@ -685,6 +698,7 @@ func (b *Builder) CreateCall(fn *ir.Function, args []ir.Value, name string) *ir.
 		Callee: fn,
 	}
 	inst.SetName(name)
+	inst.SetType(fn.FuncType.ReturnType) // Fixed: Set instruction type
 	for i, arg := range args {
 		inst.SetOperand(i, arg)
 	}
@@ -701,6 +715,7 @@ func (b *Builder) CreateCallByName(name string, retType types.Type, args []ir.Va
 		CalleeName: name,
 	}
 	inst.SetName(resultName)
+	inst.SetType(retType) // Fixed: Set instruction type
 	for i, arg := range args {
 		inst.SetOperand(i, arg)
 	}
@@ -717,6 +732,8 @@ func (b *Builder) CreateExtractValue(agg ir.Value, indices []int, name string) *
 		Indices: indices,
 	}
 	inst.SetName(name)
+	// Simplified return type calculation
+	inst.SetType(agg.Type()) // In reality, this should be the element type
 	inst.SetOperand(0, agg)
 	b.insert(inst)
 	return inst
@@ -731,6 +748,7 @@ func (b *Builder) CreateInsertValue(agg ir.Value, val ir.Value, indices []int, n
 		Indices: indices,
 	}
 	inst.SetName(name)
+	inst.SetType(agg.Type())
 	inst.SetOperand(0, agg)
 	inst.SetOperand(1, val)
 	b.insert(inst)
