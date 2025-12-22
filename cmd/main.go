@@ -11,8 +11,8 @@ package main
 
 import (
 	"fmt"
-
-	"github.com/arc-language/core-builder"
+	
+	builder "github.com/arc-language/core-builder"
 	"github.com/arc-language/core-builder/ir"
 	"github.com/arc-language/core-builder/types"
 )
