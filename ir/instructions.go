@@ -33,8 +33,8 @@ func (i *BrInst) String() string {
 // CondBrInst represents a conditional branch
 type CondBrInst struct {
 	BaseInstruction
-	Condition Value
-	TrueBlock *BasicBlock
+	Condition  Value
+	TrueBlock  *BasicBlock
 	FalseBlock *BasicBlock
 }
 
@@ -96,10 +96,10 @@ func (i *BinaryInst) String() string {
 	if i.Exact {
 		flags += " exact"
 	}
-	
+
 	lhs := i.Ops[0]
 	rhs := i.Ops[1]
-	
+
 	return fmt.Sprintf("%%%s = %s%s %s %%%s, %%%s",
 		i.ValName, i.Op, flags, lhs.Type(), lhs.Name(), rhs.Name())
 }
@@ -294,7 +294,8 @@ func (i *CallInst) String() string {
 		calleeName = i.Callee.Name()
 	}
 	
-	if i.ValType.Kind() == types.VoidKind {
+	// FIX: Check for nil ValType to prevent panic
+	if i.ValType == nil || i.ValType.Kind() == types.VoidKind {
 		return fmt.Sprintf("%scall void @%s(%s)", tail, calleeName, strings.Join(args, ", "))
 	}
 	return fmt.Sprintf("%%%s = %scall %s @%s(%s)",
