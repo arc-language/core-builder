@@ -138,10 +138,17 @@ type StructType struct {
 }
 
 func (t *StructType) Kind() TypeKind { return StructKind }
+
 func (t *StructType) String() string {
+	// If the struct is named, return the name reference
 	if t.Name != "" {
 		return fmt.Sprintf("%%%s", t.Name)
 	}
+	return t.DefString()
+}
+
+// DefString returns the structural definition (body) of the struct
+func (t *StructType) DefString() string {
 	fields := make([]string, len(t.Fields))
 	for i, f := range t.Fields {
 		fields[i] = f.String()
@@ -154,6 +161,7 @@ func (t *StructType) String() string {
 	}
 	return prefix + strings.Join(fields, ", ") + suffix
 }
+
 func (t *StructType) BitSize() int {
 	total := 0
 	for _, f := range t.Fields {

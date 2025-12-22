@@ -136,7 +136,8 @@ func (b *Builder) CreateGlobalVariable(name string, typ types.Type, initializer 
 		Initializer: initializer,
 		Linkage:     ir.ExternalLinkage,
 	}
-	g.SetType(typ)
+	// Globals are pointers to the value
+	g.SetType(types.NewPointer(typ))
 	g.SetName(name)
 	if b.module != nil {
 		b.module.AddGlobal(g)
@@ -152,7 +153,8 @@ func (b *Builder) CreateGlobalConstant(name string, initializer ir.Constant) *ir
 		Linkage:     ir.ExternalLinkage,
 	}
 	g.SetName(name)
-	g.SetType(initializer.Type())
+	// Globals are pointers to the value
+	g.SetType(types.NewPointer(initializer.Type()))
 	if b.module != nil {
 		b.module.AddGlobal(g)
 	}
@@ -271,7 +273,7 @@ func (b *Builder) createBinaryOp(op ir.Opcode, lhs, rhs ir.Value, name string) *
 		name = b.generateName()
 	}
 	inst := &ir.BinaryInst{}
-	inst.Op = op // FIX: Set Opcode
+	inst.Op = op
 	inst.SetName(name)
 	inst.SetOperand(0, lhs)
 	inst.SetOperand(1, rhs)
@@ -542,7 +544,7 @@ func (b *Builder) createCast(op ir.Opcode, v ir.Value, destTy types.Type, name s
 	inst := &ir.CastInst{
 		DestType: destTy,
 	}
-	inst.Op = op // FIX: Set Opcode
+	inst.Op = op
 	inst.SetName(name)
 	inst.SetType(destTy)
 	inst.SetOperand(0, v)

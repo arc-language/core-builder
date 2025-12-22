@@ -356,7 +356,13 @@ func (g *Global) String() string {
 	if g.Initializer != nil {
 		parts = append(parts, g.Initializer.String())
 	} else {
-		parts = append(parts, g.ValType.String())
+		// If no initializer, we print the content type, not the pointer type
+		// Global.ValType is usually ptr<T>, we want T
+		if ptrTy, ok := g.ValType.(*types.PointerType); ok {
+			parts = append(parts, ptrTy.ElementType.String())
+		} else {
+			parts = append(parts, g.ValType.String())
+		}
 	}
 	return strings.Join(parts, " ")
 }
@@ -622,7 +628,8 @@ func (m *Module) String() string {
 	
 	// Named types
 	for name, typ := range m.Types {
-		sb.WriteString(fmt.Sprintf("%%%s = type %s\n", name, typ.String()))
+		// Use DefString to print the body, not the name reference
+		sb.WriteString(fmt.Sprintf("%%%s = type %s\n", name, typ.DefString()))
 	}
 	if len(m.Types) > 0 {
 		sb.WriteString("\n")
