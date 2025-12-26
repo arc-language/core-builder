@@ -746,6 +746,25 @@ func (b *Builder) CreateCallByName(name string, retType types.Type, args []ir.Va
 	return inst
 }
 
+// CreateSyscall creates a system call instruction
+func (b *Builder) CreateSyscall(args []ir.Value) *ir.SyscallInst {
+	if b.currentBlock == nil {
+		panic("no insertion block set")
+	}
+	name := b.generateName()
+	inst := &ir.SyscallInst{}
+	inst.Op = ir.OpSyscall
+	inst.SetName(name)
+	// Syscalls generally return an integer result (machine word, typically i64)
+	inst.SetType(types.I64)
+	
+	for i, arg := range args {
+		inst.SetOperand(i, arg)
+	}
+	b.insert(inst)
+	return inst
+}
+
 // CreateExtractValue extracts a value from an aggregate
 func (b *Builder) CreateExtractValue(agg ir.Value, indices []int, name string) *ir.ExtractValueInst {
 	if name == "" {
