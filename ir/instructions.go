@@ -332,6 +332,21 @@ func (i *CallInst) String() string {
 		i.ValName, tail, i.ValType, calleeName, strings.Join(args, ", "))
 }
 
+// SyscallInst represents a system call operation
+type SyscallInst struct {
+	BaseInstruction
+}
+
+func (i *SyscallInst) String() string {
+	var args []string
+	for _, arg := range i.Ops {
+		if arg != nil {
+			args = append(args, fmt.Sprintf("%s %s", arg.Type(), formatOp(arg)))
+		}
+	}
+	return fmt.Sprintf("%%%s = syscall %s", i.ValName, strings.Join(args, ", "))
+}
+
 // ExtractValueInst extracts a value from an aggregate
 type ExtractValueInst struct {
 	BaseInstruction
