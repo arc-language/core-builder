@@ -850,3 +850,39 @@ func (b *Builder) True() *ir.ConstantInt {
 func (b *Builder) False() *ir.ConstantInt {
 	return b.ConstInt(types.I1, 0)
 }
+
+// CreateVaStart creates a va_start instruction
+func (b *Builder) CreateVaStart(vaList ir.Value) *ir.VaStartInst {
+	inst := &ir.VaStartInst{}
+	inst.Op = ir.OpVaStart
+	inst.SetOperand(0, vaList)
+	inst.SetType(types.Void)
+	b.insert(inst)
+	return inst
+}
+
+// CreateVaArg creates a va_arg instruction
+func (b *Builder) CreateVaArg(vaList ir.Value, argType types.Type, name string) *ir.VaArgInst {
+	if name == "" {
+		name = b.generateName()
+	}
+	inst := &ir.VaArgInst{
+		ArgType: argType,
+	}
+	inst.Op = ir.OpVaArg
+	inst.SetName(name)
+	inst.SetType(argType)
+	inst.SetOperand(0, vaList)
+	b.insert(inst)
+	return inst
+}
+
+// CreateVaEnd creates a va_end instruction
+func (b *Builder) CreateVaEnd(vaList ir.Value) *ir.VaEndInst {
+	inst := &ir.VaEndInst{}
+	inst.Op = ir.OpVaEnd
+	inst.SetOperand(0, vaList)
+	inst.SetType(types.Void)
+	b.insert(inst)
+	return inst
+}
