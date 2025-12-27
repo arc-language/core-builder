@@ -302,7 +302,8 @@ func (i *SelectInst) String() string {
 type CallInst struct {
 	BaseInstruction
 	Callee     *Function
-	CalleeName string // For indirect calls or declarations
+	CalleeName string
+	// For indirect calls or declarations
 	IsTailCall bool
 }
 
@@ -380,4 +381,36 @@ func (i *InsertValueInst) String() string {
 		i.ValName, agg.Type(), formatOp(agg),
 		val.Type(), formatOp(val),
 		strings.Join(indices, ", "))
+}
+
+// VaStartInst represents va_start intrinsic
+type VaStartInst struct {
+	BaseInstruction
+}
+
+func (i *VaStartInst) String() string {
+	vaList := i.Ops[0]
+	return fmt.Sprintf("va_start %s %s", vaList.Type(), formatOp(vaList))
+}
+
+// VaArgInst represents va_arg intrinsic
+type VaArgInst struct {
+	BaseInstruction
+	ArgType types.Type
+}
+
+func (i *VaArgInst) String() string {
+	vaList := i.Ops[0]
+	return fmt.Sprintf("%%%s = va_arg %s %s, %s", 
+		i.ValName, vaList.Type(), formatOp(vaList), i.ArgType)
+}
+
+// VaEndInst represents va_end intrinsic
+type VaEndInst struct {
+	BaseInstruction
+}
+
+func (i *VaEndInst) String() string {
+	vaList := i.Ops[0]
+	return fmt.Sprintf("va_end %s %s", vaList.Type(), formatOp(vaList))
 }
