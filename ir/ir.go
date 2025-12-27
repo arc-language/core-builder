@@ -93,9 +93,14 @@ const (
 	OpPhi
 	OpSelect
 	OpCall
-	OpSyscall // Added for system calls
+	OpSyscall
 	OpExtractValue
 	OpInsertValue
+	
+	// Variadic argument operations
+	OpVaStart
+	OpVaArg
+	OpVaEnd
 )
 
 var opcodeNames = map[Opcode]string{
@@ -143,9 +148,12 @@ var opcodeNames = map[Opcode]string{
 	OpPhi:           "phi",
 	OpSelect:        "select",
 	OpCall:          "call",
-	OpSyscall:       "syscall", // Added for system calls
+	OpSyscall:       "syscall",
 	OpExtractValue:  "extractvalue",
 	OpInsertValue:   "insertvalue",
+	OpVaStart:       "va_start",
+	OpVaArg:         "va_arg",
+	OpVaEnd:         "va_end",
 }
 
 func (op Opcode) String() string {
